@@ -26,16 +26,16 @@
     "lengthKm": 1000,
     "topic": "hügelig",
     "subject": "Informatik",
-    "description": "Here goes the info",
+    "description": "Sandro sieht gut aus",
     "sections": [
       {
         "id": "96f60995-958a-4077-ac5a-a957fe26d5ea",
-        "name": "Abschnitt 1",
-        "lengthM": 100,
-        "startDesc": "parkplatz",
-        "endDesc": "baum",
-        "difficulty": "schwer",
-        "notes": "keine besonderheiten"
+        "name": "1.Jahr",
+        "lengthM": 365,
+        "startDesc": "Bumble",
+        "endDesc": "Regensburg",
+        "difficulty": "leicht",
+        "notes": "Ich liebe dich!!"
       }
     ]
   }
