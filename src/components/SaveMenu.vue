@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTrails } from '../stores/trails'
 import { findSection } from '../config/trails'
@@ -33,8 +33,17 @@ watch(open, (o) => {
 })
 onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown))
 
+// Safari fokussiert Buttons beim Anklicken nicht, sondern schiebt den Fokus auf <main tabindex="-1">.
+// Ein Klick ins Menü darf es deshalb nicht über focusout schließen (sonst kommt der Klick nie an).
+let pointerInside = false
+const resetPointer = () => (pointerInside = false)
+const onPointerInside = () => (pointerInside = true)
+onMounted(() => window.addEventListener('pointerup', resetPointer, true))
+onBeforeUnmount(() => window.removeEventListener('pointerup', resetPointer, true))
+
 // Fokus verlässt das Menü per Tab → schließen
 function onFocusOut(e: FocusEvent) {
+  if (pointerInside) return
   const next = e.relatedTarget as Node | null
   if (next && root.value && !root.value.contains(next)) open.value = false
 }
@@ -99,7 +108,7 @@ function savePdf() {
 </script>
 
 <template>
-  <div ref="root" class="save" @keydown.esc="open && close()" @focusout="onFocusOut">
+  <div ref="root" class="save" @keydown.esc="open && close()" @focusout="onFocusOut" @pointerdown="onPointerInside">
     <button
       ref="toggleBtn"
       type="button"
