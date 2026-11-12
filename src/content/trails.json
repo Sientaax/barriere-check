@@ -18,5 +18,25 @@
         "notes": ""
       }
     ]
+  },
+  {
+    "id": "3ee780e1-6d36-43d9-8346-f7dcdbfecc3e",
+    "name": "Test 2",
+    "location": "Regensburg",
+    "lengthKm": 1000,
+    "topic": "hügelig",
+    "subject": "Informatik",
+    "description": "Here goes the info",
+    "sections": [
+      {
+        "id": "96f60995-958a-4077-ac5a-a957fe26d5ea",
+        "name": "Abschnitt 1",
+        "lengthM": 100,
+        "startDesc": "parkplatz",
+        "endDesc": "baum",
+        "difficulty": "schwer",
+        "notes": "keine besonderheiten"
+      }
+    ]
   }
 ]
