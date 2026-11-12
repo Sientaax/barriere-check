@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSectionView } from './trailContext'
 import { difficultyLabel } from '../config/trails'
@@ -10,7 +10,7 @@ import ResultOverview from '../components/ResultOverview.vue'
 import IssueList from '../components/IssueList.vue'
 import PhotoThumb from '../components/PhotoThumb.vue'
 import SaveMenu from '../components/SaveMenu.vue'
-import { printWhenImagesReady } from '../lib/print'
+import { printWhenImagesReady, tryPrint } from '../lib/print'
 
 const view = useSectionView()
 const trail = computed(() => view.value.trail)
@@ -31,14 +31,27 @@ function groupLabel(id: string) {
   return USER_GROUPS.find((g) => g.id === id)?.short ?? id
 }
 
-// „Speichern → Als PDF“ von der Startseite: Bericht öffnen und Druckdialog anzeigen
+// „Speichern → Als PDF“ von der Startseite: Bericht öffnen und Druckdialog anzeigen.
+// Safari blockiert den automatischen Druck (kein Klick auf dieser Seite) – dann Button zum Drucken anbieten.
+const printHint = ref(false)
+const printBtn = ref<HTMLButtonElement | null>(null)
+const hidePrintHint = () => (printHint.value = false)
 onMounted(async () => {
+  window.addEventListener('beforeprint', hidePrintHint)
   if (route.query.print !== '1') return
   router.replace({ query: {} })
   await nextTick()
   // Erst drucken, wenn alle Fotos geladen sind
-  await printWhenImagesReady()
+  if (!(await tryPrint())) {
+    printHint.value = true
+    await nextTick()
+    printBtn.value?.focus()
+  }
 })
+onBeforeUnmount(() => window.removeEventListener('beforeprint', hidePrintHint))
+function printNow() {
+  printWhenImagesReady()
+}
 function valueText(v: unknown) {
   return typeof v === 'number' ? `${v} – ${scaleLabel(v as 0)}` : scaleLabel((v ?? null) as null)
 }
@@ -51,6 +64,10 @@ function valueText(v: unknown) {
         Druckoptimierte Übersicht. Über „Speichern“ sichern Sie die Bewertung als JSON-Datei oder erzeugen einen
         PDF-Bericht zum Weitergeben.
       </p>
+      <div v-if="printHint" class="print-hint" role="status">
+        <p>Der Druckdialog konnte nicht automatisch geöffnet werden (z. B. in Safari).</p>
+        <button ref="printBtn" type="button" class="btn btn-primary" @click="printNow">Als PDF speichern</button>
+      </div>
       <div class="btn-row">
         <SaveMenu :section-id="def.id" print-here />
         <label class="check"><input v-model="showDetails" type="checkbox" /> Einzelbewertungen anzeigen</label>
@@ -165,6 +182,8 @@ function valueText(v: unknown) {
 </template>
 
 <style scoped>
+.print-hint { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: center; margin-bottom: 0.75rem; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; background: var(--primary-soft); }
+.print-hint p { margin: 0; }
 .check { display: inline-flex; gap: 0.4rem; align-items: center; min-height: 44px; }
 .check input { width: 1.2rem; height: 1.2rem; accent-color: var(--primary); }
 .trail-name { margin: 0.4rem 0 0; color: var(--muted); font-weight: 600; }

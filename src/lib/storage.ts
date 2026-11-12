@@ -108,7 +108,8 @@ export function downloadFile(filename: string, content: string, type = 'applicat
   document.body.appendChild(a)
   a.click()
   a.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
+  // Safari startet den Download verzögert – zu frühes Freigeben bricht ihn ab
+  setTimeout(() => URL.revokeObjectURL(url), 60_000)
 }
 
 export function slug(s: string): string {

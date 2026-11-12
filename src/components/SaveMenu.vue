@@ -3,7 +3,7 @@ import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTrails } from '../stores/trails'
 import { findSection } from '../config/trails'
-import { buildExport, downloadFile, slug } from '../lib/storage'
+import { buildExport, downloadFile, slug, type ExportFile } from '../lib/storage'
 import { printWhenImagesReady } from '../lib/print'
 
 const props = defineProps<{
@@ -53,9 +53,22 @@ function onMenuKey(e: KeyboardEvent) {
   items[j]?.focus()
 }
 
+// Export schon beim Öffnen des Menüs vorbereiten: Safari erlaubt den Download nur direkt im Klick,
+// nicht erst nach dem (asynchronen) Lesen der Fotos aus IndexedDB.
+let prepared: { data: ExportFile | null; promise: Promise<ExportFile> } | null = null
+function prepareExport() {
+  const entry: { data: ExportFile | null; promise: Promise<ExportFile> } = {
+    data: null,
+    promise: buildExport([store.peek(props.sectionId)]),
+  }
+  entry.promise.then((d) => (entry.data = d)).catch(() => undefined)
+  prepared = entry
+}
+
 async function toggle() {
   open.value = !open.value
   if (open.value) {
+    prepareExport()
     status.value = ''
     await nextTick()
     firstOption.value?.focus()
@@ -70,7 +83,9 @@ function close() {
 async function saveJson() {
   const ref = findSection(props.sectionId)
   const name = ref ? `${ref.trail.name}-${ref.section.name}` : props.sectionId
-  const data = await buildExport([store.peek(props.sectionId)])
+  // Normalfall: Daten liegen bereits vor → Download synchron im Klick (Safari)
+  const data = prepared?.data ?? (await (prepared?.promise ?? buildExport([store.peek(props.sectionId)])))
+  prepared = null
   downloadFile(`barriere-check-${slug(name)}-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(data, null, 2))
   status.value = 'JSON-Datei wurde heruntergeladen.'
   close()
