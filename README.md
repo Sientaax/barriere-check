@@ -39,7 +39,8 @@ Alles wird **automatisch gespeichert** – im Browser des jeweiligen Geräts.
 
 ### Speichern, Weitergeben, Importieren
 
-- **Speichern → Als PDF speichern** (auf der Kachel oder im Bericht): öffnet den Druckdialog des Browsers; dort
+- **Speichern → Als PDF speichern** (auf der Kachel oder im Bericht): öffnet den Druckdialog des Browsers mit dem
+  Ergebnisbericht – auf der Startseite ohne Seitenwechsel; dort
   „Als PDF speichern“ wählen. Der Bericht trägt in der Fußzeile „OTH Regensburg“. Fotos werden vor dem Drucken
   vollständig geladen.
 - **Speichern → Als JSON speichern**: sichert die komplette Bewertung eines Abschnitts inkl. Fotos als Datei –

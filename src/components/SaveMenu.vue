@@ -1,20 +1,19 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import { useTrails } from '../stores/trails'
 import { findSection } from '../config/trails'
 import { buildExport, downloadFile, slug, type ExportFile } from '../lib/storage'
-import { printWhenImagesReady } from '../lib/print'
+import { printWhenImagesReady, tryPrint } from '../lib/print'
+import ReportDocument from './ReportDocument.vue'
 
 const props = defineProps<{
   sectionId: string
-  /** true: PDF direkt aus der aktuellen Seite drucken (Bericht); sonst zum Bericht wechseln und dort drucken */
+  /** true: PDF aus der aktuellen Seite drucken (Bericht); sonst den Bericht unsichtbar einblenden und ihn drucken */
   printHere?: boolean
   small?: boolean
 }>()
 
 const store = useTrails()
-const router = useRouter()
 const open = ref(false)
 const status = ref('')
 const firstOption = ref<HTMLButtonElement | null>(null)
@@ -30,8 +29,24 @@ function onPointerDown(e: PointerEvent) {
 watch(open, (o) => {
   if (o) document.addEventListener('pointerdown', onPointerDown)
   else document.removeEventListener('pointerdown', onPointerDown)
+  // Bericht für den Druck außerhalb der Berichtsseite: schon beim Öffnen des Menüs rendern,
+  // damit der Druck noch synchron im Klick starten kann (Safari)
+  if (!props.printHere) {
+    if (o) showReport.value = true
+    else if (!pdfPending) showReport.value = false
+  }
 })
-onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown))
+onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', onPointerDown)
+  window.removeEventListener('afterprint', hideReport)
+})
+
+const showReport = ref(false)
+let pdfPending = false
+function hideReport() {
+  window.removeEventListener('afterprint', hideReport)
+  showReport.value = false
+}
 
 // Safari fokussiert Buttons beim Anklicken nicht, sondern schiebt den Fokus auf <main tabindex="-1">.
 // Ein Klick ins Menü darf es deshalb nicht über focusout schließen (sonst kommt der Klick nie an).
@@ -100,10 +115,23 @@ async function saveJson() {
   close()
 }
 
-function savePdf() {
+async function savePdf() {
+  if (props.printHere) {
+    open.value = false
+    printWhenImagesReady()
+    return
+  }
+  // Ohne Seitenwechsel: den (unsichtbar eingeblendeten) Bericht drucken, danach wieder entfernen
+  pdfPending = true
   open.value = false
-  if (props.printHere) printWhenImagesReady()
-  else router.push({ path: `/abschnitt/${props.sectionId}/bericht`, query: { print: '1' } })
+  window.addEventListener('afterprint', hideReport)
+  const opened = await tryPrint()
+  pdfPending = false
+  if (!opened) {
+    hideReport()
+    status.value = 'Der Druckdialog konnte nicht geöffnet werden. Bitte „Als PDF speichern“ erneut wählen.'
+  }
+  toggleBtn.value?.focus()
 }
 </script>
 
@@ -126,6 +154,11 @@ function savePdf() {
       <button type="button" role="menuitem" class="item" @click="savePdf">Als PDF speichern</button>
     </div>
     <span class="sr-only" role="status" aria-live="polite">{{ status }}</span>
+    <Teleport v-if="showReport" to="body">
+      <div class="print-standalone">
+        <ReportDocument :section-id="sectionId" :heading-id="`report-${sectionId}`" />
+      </div>
+    </Teleport>
   </div>
 </template>
 

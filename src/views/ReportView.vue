@@ -1,60 +1,13 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, ref } from 'vue'
 import { useSectionView } from './trailContext'
-import { difficultyLabel } from '../config/trails'
-import { CATEGORIES, USER_GROUPS, questionsOf } from '../config/criteria'
-import { DISCLAIMER, scaleLabel } from '../config/rating'
-import { buildRecommendations, findIssues } from '../lib/scoring'
-import ResultOverview from '../components/ResultOverview.vue'
-import IssueList from '../components/IssueList.vue'
-import PhotoThumb from '../components/PhotoThumb.vue'
+import ReportDocument from '../components/ReportDocument.vue'
 import SaveMenu from '../components/SaveMenu.vue'
-import { printWhenImagesReady, tryPrint } from '../lib/print'
 
 const view = useSectionView()
-const trail = computed(() => view.value.trail)
 const def = computed(() => view.value.sectionDef)
-const trailDef = computed(() => view.value.trailDef)
-const route = useRoute()
-const router = useRouter()
 const showDetails = ref(true)
 const showPhotos = ref(true)
-
-const issues = computed(() => findIssues(trail.value))
-const critical = computed(() => issues.value.filter((i) => i.kind === 'critical'))
-const unknown = computed(() => issues.value.filter((i) => i.kind === 'unknown'))
-const recs = computed(() => buildRecommendations(trail.value))
-const today = new Date().toLocaleDateString('de-DE')
-
-function groupLabel(id: string) {
-  return USER_GROUPS.find((g) => g.id === id)?.short ?? id
-}
-
-// „Speichern → Als PDF“ von der Startseite: Bericht öffnen und Druckdialog anzeigen.
-// Safari blockiert den automatischen Druck (kein Klick auf dieser Seite) – dann Button zum Drucken anbieten.
-const printHint = ref(false)
-const printBtn = ref<HTMLButtonElement | null>(null)
-const hidePrintHint = () => (printHint.value = false)
-onMounted(async () => {
-  window.addEventListener('beforeprint', hidePrintHint)
-  if (route.query.print !== '1') return
-  router.replace({ query: {} })
-  await nextTick()
-  // Erst drucken, wenn alle Fotos geladen sind
-  if (!(await tryPrint())) {
-    printHint.value = true
-    await nextTick()
-    printBtn.value?.focus()
-  }
-})
-onBeforeUnmount(() => window.removeEventListener('beforeprint', hidePrintHint))
-function printNow() {
-  printWhenImagesReady()
-}
-function valueText(v: unknown) {
-  return typeof v === 'number' ? `${v} – ${scaleLabel(v as 0)}` : scaleLabel((v ?? null) as null)
-}
 </script>
 
 <template>
@@ -64,150 +17,17 @@ function valueText(v: unknown) {
         Druckoptimierte Übersicht. Über „Speichern“ sichern Sie die Bewertung als JSON-Datei oder erzeugen einen
         PDF-Bericht zum Weitergeben.
       </p>
-      <div v-if="printHint" class="print-hint" role="status">
-        <p>Der Druckdialog konnte nicht automatisch geöffnet werden (z. B. in Safari).</p>
-        <button ref="printBtn" type="button" class="btn btn-primary" @click="printNow">Als PDF speichern</button>
-      </div>
       <div class="btn-row">
         <SaveMenu :section-id="def.id" print-here />
         <label class="check"><input v-model="showDetails" type="checkbox" /> Einzelbewertungen anzeigen</label>
         <label class="check"><input v-model="showPhotos" type="checkbox" /> Fotos anzeigen</label>
       </div>
     </div>
-    <!-- Druckrahmen: thead/tfoot wiederholen sich auf jeder PDF-Seite und halten Platz für Rand und Fußzeile frei -->
-    <table class="print-frame" role="presentation">
-      <thead aria-hidden="true"><tr><td><div class="pf-top"></div></td></tr></thead>
-      <tfoot aria-hidden="true"><tr><td><div class="pf-bottom"></div></td></tr></tfoot>
-      <tbody><tr><td>
-
-        <header class="card rhead">
-          <p class="kicker">Ergebnisbericht Barrierefreiheit &amp; Inklusion</p>
-          <p class="trail-name">{{ trailDef.name }}</p>
-          <h1 id="h1">{{ def.name }}</h1>
-          <h2 class="h3">Streckenabschnitt</h2>
-          <dl class="meta">
-            <div><dt>Länge</dt><dd>{{ def.lengthM ? `${def.lengthM.toLocaleString('de-DE')} m` : '–' }}</dd></div>
-            <div><dt>Beginn</dt><dd>{{ def.startDesc || '–' }}</dd></div>
-            <div><dt>Ende</dt><dd>{{ def.endDesc || '–' }}</dd></div>
-            <div><dt>Schwierigkeit</dt><dd>{{ difficultyLabel(def.difficulty) }}</dd></div>
-            <div><dt>Bericht erstellt</dt><dd>{{ today }}</dd></div>
-          </dl>
-          <p v-if="def.notes" class="desc"><strong>Besonderheiten:</strong> {{ def.notes }}</p>
-          <h2 class="h3">Lehrpfad</h2>
-          <dl class="meta">
-            <div><dt>Lage / Ort</dt><dd>{{ trailDef.location || '–' }}</dd></div>
-            <div><dt>Gesamtlänge</dt><dd>{{ trailDef.lengthKm ? `${trailDef.lengthKm.toLocaleString('de-DE')} km` : '–' }}</dd></div>
-            <div v-if="trailDef.topic"><dt>Thema / Schwerpunkt</dt><dd>{{ trailDef.topic }}</dd></div>
-            <div v-if="trailDef.subject"><dt>Studiumsfach</dt><dd>{{ trailDef.subject }}</dd></div>
-          </dl>
-          <p v-if="trailDef.description" class="desc">{{ trailDef.description }}</p>
-        </header>
-
-        <ResultOverview :trail="trail" />
-
-        <div class="card">
-          <h2>Handlungsempfehlungen</h2>
-          <p class="small muted">
-            Für alle Kriterien mit einer Bewertung von 2 oder schlechter, priorisiert nach kritischen Barrieren,
-            Bedeutung des Kriteriums und Ausmaß des Defizits.
-          </p>
-          <p v-if="!recs.length" class="muted">Keine Kriterien mit Handlungsbedarf (alle Bewertungen ≥ 3).</p>
-          <ol v-else class="recs">
-            <li v-for="r in recs" :key="r.question.id">
-              <div class="rtop">
-                <span class="badge" :class="r.priorityLabel === 'Hoch' ? 'badge-danger' : r.priorityLabel === 'Mittel' ? 'badge-warn' : ''">
-                  Priorität {{ r.priorityLabel }}
-                </span>
-                <strong>{{ r.question.id }} {{ r.question.text }}</strong>
-              </div>
-              <p>{{ r.question.recommendation }}</p>
-              <p class="small muted">
-                Betroffen:
-                <span v-for="(a, idx) in r.affected" :key="a.section.id">{{ idx ? ', ' : '' }}{{ a.section.name }} ({{ a.value }})</span>
-                · Nutzergruppen: {{ r.question.userGroups.map(groupLabel).join(', ') }}
-              </p>
-            </li>
-          </ol>
-        </div>
-
-        <div class="card">
-          <h2>Kritische Barrieren</h2>
-          <IssueList :issues="critical" empty-text="Keine kritischen Barrieren erfasst." />
-        </div>
-
-        <div class="card">
-          <h2>Nicht beurteilbare Kriterien</h2>
-          <IssueList :issues="unknown" empty-text="Alle Kriterien konnten beurteilt werden." />
-        </div>
-
-        <template v-if="showDetails">
-          <div v-for="s in trail.sections" :key="s.id" class="card details">
-            <h2>Einzelbewertungen</h2>
-            <div v-for="c in CATEGORIES" :key="c.id" class="cat">
-              <h3>{{ c.id }}. {{ c.title }}</h3>
-              <div class="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th scope="col">Frage</th>
-                      <th scope="col">Bewertung</th>
-                      <th scope="col">Nachweise</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="q in questionsOf(c.id)" :key="q.id">
-                      <th scope="row" class="qcol"><span class="qid">{{ q.id }}</span> {{ q.text }}</th>
-                      <td class="vcol" :class="`v-${s.answers[q.id]?.value ?? 'null'}`">{{ valueText(s.answers[q.id]?.value) }}</td>
-                      <td>
-                        <p v-if="s.answers[q.id]?.comment" class="small">{{ s.answers[q.id].comment }}</p>
-                        <p v-if="s.answers[q.id]?.measurements.length" class="small">
-                          <span v-for="(m, i) in s.answers[q.id].measurements" :key="m.id">{{ i ? '; ' : '' }}{{ m.label }}: {{ m.value }} {{ m.unit }}</span>
-                        </p>
-                        <div v-if="showPhotos && s.answers[q.id]?.photoIds.length" class="photos">
-                          <PhotoThumb v-for="(p, i) in s.answers[q.id].photoIds" :id="p" :key="p" :alt="`Foto ${i + 1} zu ${q.id}, ${s.name}`" />
-                        </div>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </template>
-
-        <p class="alert alert-info small"><strong>Hinweis:</strong> {{ DISCLAIMER }}</p>
-      </td></tr></tbody>
-    </table>
+    <ReportDocument :section-id="def.id" :show-details="showDetails" :show-photos="showPhotos" />
   </section>
 </template>
 
 <style scoped>
-.print-hint { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: center; margin-bottom: 0.75rem; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; background: var(--primary-soft); }
-.print-hint p { margin: 0; }
 .check { display: inline-flex; gap: 0.4rem; align-items: center; min-height: 44px; }
 .check input { width: 1.2rem; height: 1.2rem; accent-color: var(--primary); }
-.trail-name { margin: 0.4rem 0 0; color: var(--muted); font-weight: 600; }
-.h3 + .meta { margin-top: 0.25rem; }
-.kicker { text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.8rem; font-weight: 700; color: var(--primary-strong); margin: 0; }
-.meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.5rem 1rem; margin: 0.5rem 0 1rem; }
-.meta dt { font-size: 0.8rem; color: var(--muted); }
-.meta dd { margin: 0; font-weight: 600; }
-.desc { white-space: pre-line; }
-.h3 { font-size: 1.05rem; }
-.recs { padding-left: 1.4rem; display: grid; gap: 0.9rem; }
-.recs p { margin: 0.25rem 0 0; }
-.rtop { display: flex; gap: 0.5rem; align-items: baseline; flex-wrap: wrap; }
-.cat { margin-top: 1rem; }
-.qcol { font-weight: 500; background: none; width: 45%; }
-.qid { font-weight: 700; }
-.vcol { white-space: nowrap; font-weight: 600; }
-.v-0 { color: var(--lvl-sehr-gering); }
-.v-1 { color: #a5500f; }
-.v-unknown { color: var(--info); }
-.v-null { color: var(--muted); font-style: italic; }
-.photos { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-td p { margin: 0 0 0.3rem; }
-@media print {
-  .details { break-before: page; }
-}
 </style>

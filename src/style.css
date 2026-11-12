@@ -180,6 +180,9 @@ td.num, th.num { text-align: right; white-space: nowrap; }
 /* Fußzeile im PDF (ersetzt die Browser-Kopf-/Fußzeile mit URL) */
 .print-footer { display: none; }
 
+/* PDF-Druck von der Startseite: Bericht liegt unsichtbar am Ende von body und ersetzt im Druck die Seite */
+.print-standalone { display: none; }
+
 /* Druckrahmen des Berichts: am Bildschirm unsichtbar, im Druck Abstand oben/unten auf jeder Seite */
 .print-frame, .print-frame > tbody, .print-frame > tbody > tr, .print-frame > tbody > tr > td { display: block; }
 .print-frame { width: auto; border-collapse: separate; font-size: inherit; }
@@ -204,6 +207,8 @@ td.num, th.num { text-align: right; white-space: nowrap; }
     text-align: center; font-size: 9pt; color: #55585a;
   }
   main { padding: 0; }
+  body:has(> .print-standalone) #app > :not(.print-footer) { display: none !important; }
+  .print-standalone { display: block; }
   .card { box-shadow: none; border-color: #999; break-inside: avoid; }
   a { color: inherit; text-decoration: none; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
