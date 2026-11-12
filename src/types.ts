@@ -14,26 +14,47 @@ export interface Answer {
   photoIds: string[]
 }
 
-export interface Section {
+export type Difficulty = 'leicht' | 'mittel' | 'schwer'
+
+/** Vorgegebener Wegabschnitt (Stammdaten aus `src/config/trails.ts`). */
+export interface SectionDef {
   id: string
   name: string
   lengthM: number | null
   startDesc: string
   endDesc: string
-  answers: Record<string, Answer>
+  difficulty: Difficulty
+  /** Besonderheiten */
+  notes: string
 }
 
-export interface Trail {
+/** Vorgegebener Lehrpfad; hat immer mindestens einen Abschnitt. */
+export interface TrailDef {
   id: string
   name: string
   location: string
   lengthKm: number | null
-  description: string
   topic: string
-  operator: string
-  assessor: string
-  date: string
-  createdAt: string
-  updatedAt: string
+  /** Studiumsfach */
+  subject: string
+  /** Allgemeine Informationen */
+  description: string
+  sections: [SectionDef, ...SectionDef[]]
+}
+
+/** Abschnitt inkl. Bewertung – Eingabe für die Bewertungslogik. */
+export interface Section extends SectionDef {
+  answers: Record<string, Answer>
+}
+
+/** Lehrpfad mit bewerteten Abschnitten – Eingabe für die Bewertungslogik. */
+export interface Trail extends Omit<TrailDef, 'sections'> {
   sections: Section[]
+}
+
+/** Lokal gespeicherte Bewertung eines Abschnitts. */
+export interface Assessment {
+  sectionId: string
+  answers: Record<string, Answer>
+  updatedAt: string
 }

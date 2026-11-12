@@ -1,18 +1,17 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useTrail } from './trailContext'
+import { useSectionView } from './trailContext'
 import { USER_GROUPS } from '../config/criteria'
 import { findIssues, progressOf } from '../lib/scoring'
 import IssueList from '../components/IssueList.vue'
 
-const trail = useTrail()
-const sectionFilter = ref('')
+const view = useSectionView()
+const trail = computed(() => view.value.trail)
 const groupFilter = ref('')
 
 const filtered = computed(() =>
   findIssues(trail.value).filter(
     (i) =>
-      (!sectionFilter.value || i.section.id === sectionFilter.value) &&
       (!groupFilter.value || i.question.userGroups.includes(groupFilter.value as never)),
   ),
 )
@@ -21,26 +20,19 @@ const unknown = computed(() => filtered.value.filter((i) => i.kind === 'unknown'
 const openBySection = computed(() =>
   trail.value.sections
     .map((s) => ({ s, p: progressOf([s]) }))
-    .filter(({ s, p }) => p.done < p.total && (!sectionFilter.value || s.id === sectionFilter.value)),
+    .filter(({ p }) => p.done < p.total),
 )
 </script>
 
 <template>
   <section aria-labelledby="h1">
     <div class="card">
-      <h1 id="h1">6. Probleme anzeigen</h1>
+      <h1 id="h1">Probleme anzeigen</h1>
       <p class="muted">
         Kritische Barrieren (Bewertung 0 – bei sicherheitsrelevanten Kriterien auch 1) und nicht beurteilbare Kriterien
         werden hier gesondert hervorgehoben.
       </p>
       <div class="form-grid">
-        <div class="field">
-          <label for="f-sec">Wegabschnitt</label>
-          <select id="f-sec" v-model="sectionFilter">
-            <option value="">Alle Abschnitte</option>
-            <option v-for="s in trail.sections" :key="s.id" :value="s.id">{{ s.name }}</option>
-          </select>
-        </div>
         <div class="field">
           <label for="f-grp">Nutzergruppe</label>
           <select id="f-grp" v-model="groupFilter">
@@ -74,14 +66,14 @@ const openBySection = computed(() =>
       <h2>Noch offene Fragen</h2>
       <ul>
         <li v-for="{ s, p } in openBySection" :key="s.id">
-          <RouterLink :to="`/pfad/${trail.id}/fragebogen/${s.id}`">{{ s.name }}</RouterLink>:
+          <RouterLink :to="`/abschnitt/${s.id}/bewertung`">{{ s.name }}</RouterLink>:
           {{ p.total - p.done }} von {{ p.total }} Fragen unbeantwortet
         </li>
       </ul>
     </div>
 
     <div class="btn-row no-print">
-      <RouterLink :to="`/pfad/${trail.id}/bericht`" class="btn btn-primary">Weiter: Ergebnisbericht →</RouterLink>
+      <RouterLink :to="`/abschnitt/${view.sectionDef.id}/bericht`" class="btn btn-primary">Weiter: Ergebnisbericht →</RouterLink>
     </div>
   </section>
 </template>

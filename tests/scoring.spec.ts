@@ -9,13 +9,13 @@ import type { Section, Trail } from '../src/types'
 function section(values: Record<string, AnswerValue>, lengthM: number | null = null, id = 's'): Section {
   const answers: Section['answers'] = {}
   for (const [k, v] of Object.entries(values)) answers[k] = { value: v, comment: '', measurements: [], photoIds: [] }
-  return { id, name: id, lengthM, startDesc: '', endDesc: '', answers }
+  return { id, name: id, lengthM, startDesc: '', endDesc: '', difficulty: 'leicht', notes: '', answers }
 }
 function all(v: AnswerValue): Record<string, AnswerValue> {
   return Object.fromEntries(QUESTIONS.map((q) => [q.id, v]))
 }
 function trail(sections: Section[]): Trail {
-  return { id: 't', name: 't', location: '', lengthKm: null, description: '', topic: '', operator: '', assessor: '', date: '', createdAt: '', updatedAt: '', sections }
+  return { id: 't', name: 't', location: '', lengthKm: null, description: '', topic: '', subject: '', sections }
 }
 
 describe('Konfiguration', () => {

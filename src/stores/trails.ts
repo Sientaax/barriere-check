@@ -1,37 +1,29 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
-import type { Answer, Section, Trail } from '../types'
-import { uid } from '../lib/id'
-import { cleanupPhotos, loadTrails, saveTrails } from '../lib/storage'
+import type { Answer, Assessment, Section, Trail } from '../types'
+import { findSection } from '../config/trails'
+import { loadAssessments, saveAssessments } from '../lib/storage'
 
 export function emptyAnswer(): Answer {
   return { value: null, comment: '', measurements: [], photoIds: [] }
 }
 
-export function newSection(name = 'Gesamtstrecke'): Section {
-  return { id: uid(), name, lengthM: null, startDesc: '', endDesc: '', answers: {} }
+export function emptyAssessment(sectionId: string): Assessment {
+  return { sectionId, answers: {}, updatedAt: '' }
 }
 
-export function newTrail(): Trail {
-  const now = new Date().toISOString()
-  return {
-    id: uid(),
-    name: '',
-    location: '',
-    lengthKm: null,
-    description: '',
-    topic: '',
-    operator: '',
-    assessor: '',
-    date: now.slice(0, 10),
-    createdAt: now,
-    updatedAt: now,
-    sections: [newSection()],
-  }
+/** Baut aus den vorgegebenen Stammdaten und der Bewertung einen Lehrpfad mit genau einem Abschnitt. */
+export function sectionTrail(sectionId: string, assessment: Assessment): Trail | undefined {
+  const ref = findSection(sectionId)
+  if (!ref) return
+  const { sections: _sections, ...meta } = ref.trail
+  const section: Section = { ...ref.section, answers: assessment.answers }
+  return { ...meta, sections: [section] }
 }
 
 export const useTrails = defineStore('trails', () => {
-  const trails = ref<Trail[]>([])
+  /** Bewertungen je Abschnitts-ID */
+  const assessments = ref<Record<string, Assessment>>({})
   const loaded = ref(false)
   const saveError = ref<string | null>(null)
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -39,13 +31,13 @@ export const useTrails = defineStore('trails', () => {
   async function load() {
     if (loaded.value) return
     try {
-      trails.value = await loadTrails()
+      assessments.value = await loadAssessments()
     } catch (e) {
       saveError.value = 'Gespeicherte Daten konnten nicht geladen werden (Privater Modus?).'
     }
     loaded.value = true
     watch(
-      trails,
+      assessments,
       () => {
         clearTimeout(timer)
         timer = setTimeout(persist, 300)
@@ -56,60 +48,42 @@ export const useTrails = defineStore('trails', () => {
 
   async function persist() {
     try {
-      await saveTrails(trails.value)
+      await saveAssessments(assessments.value)
       saveError.value = null
     } catch (e) {
-      saveError.value = 'Speichern fehlgeschlagen. Bitte Daten als JSON exportieren.'
+      saveError.value = 'Speichern fehlgeschlagen. Bitte Bewertungen als JSON speichern.'
     }
   }
 
-  function get(id: string): Trail | undefined {
-    return trails.value.find((t) => t.id === id)
+  /** Liefert die Bewertung eines Abschnitts (ohne sie anzulegen). */
+  function peek(sectionId: string): Assessment {
+    return assessments.value[sectionId] ?? emptyAssessment(sectionId)
   }
 
-  function touch(trail: Trail) {
-    trail.updatedAt = new Date().toISOString()
+  /** Liefert die Bewertung eines Abschnitts und legt sie bei Bedarf an. */
+  function assessmentFor(sectionId: string): Assessment {
+    if (!assessments.value[sectionId]) assessments.value[sectionId] = emptyAssessment(sectionId)
+    return assessments.value[sectionId]
   }
 
-  function create(): Trail {
-    const t = newTrail()
-    trails.value.unshift(t)
-    return trails.value[0]
+  function touch(sectionId: string) {
+    assessmentFor(sectionId).updatedAt = new Date().toISOString()
   }
 
-  function remove(id: string) {
-    trails.value = trails.value.filter((t) => t.id !== id)
-    persist().then(() => cleanupPhotos(trails.value))
-  }
-
-  /** Kopiert einen Lehrpfad (z. B. als Vorlage für eine Folgebewertung); Fotos werden geteilt. */
-  function duplicate(id: string): Trail | undefined {
-    const src = get(id)
-    if (!src) return
-    const copy: Trail = JSON.parse(JSON.stringify(src))
-    const now = new Date().toISOString()
-    copy.id = uid()
-    copy.name = `${src.name || 'Lehrpfad'} (Kopie)`
-    copy.createdAt = now
-    copy.updatedAt = now
-    copy.sections.forEach((s) => (s.id = uid()))
-    trails.value.unshift(copy)
-    return trails.value[0]
-  }
-
-  function importTrails(list: Trail[]): number {
-    for (const t of list) {
-      const idx = trails.value.findIndex((x) => x.id === t.id)
-      if (idx >= 0) trails.value[idx] = t
-      else trails.value.push(t)
+  /** Übernimmt importierte Bewertungen; unbekannte Abschnitte werden übersprungen. */
+  function importAssessments(list: Assessment[]): { imported: number; skipped: number } {
+    let imported = 0
+    let skipped = 0
+    for (const a of list) {
+      if (!a || typeof a.sectionId !== 'string' || !findSection(a.sectionId)) {
+        skipped++
+        continue
+      }
+      assessments.value[a.sectionId] = { sectionId: a.sectionId, answers: a.answers ?? {}, updatedAt: a.updatedAt ?? '' }
+      imported++
     }
-    return list.length
+    return { imported, skipped }
   }
 
-  function answer(section: Section, questionId: string): Answer {
-    if (!section.answers[questionId]) section.answers[questionId] = emptyAnswer()
-    return section.answers[questionId]
-  }
-
-  return { trails, loaded, saveError, load, persist, get, touch, create, remove, duplicate, importTrails, answer }
+  return { assessments, loaded, saveError, load, persist, peek, assessmentFor, touch, importAssessments }
 })

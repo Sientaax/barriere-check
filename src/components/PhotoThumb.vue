@@ -4,13 +4,19 @@ import { loadPhoto } from '../lib/storage'
 
 const props = defineProps<{ id: string; alt: string }>()
 const url = ref<string | null>(null)
+const loading = ref(true)
 
 watch(
   () => props.id,
   async (id) => {
     if (url.value) URL.revokeObjectURL(url.value)
-    const blob = await loadPhoto(id)
-    url.value = blob ? URL.createObjectURL(blob) : null
+    loading.value = true
+    try {
+      const blob = await loadPhoto(id)
+      url.value = blob ? URL.createObjectURL(blob) : null
+    } finally {
+      loading.value = false
+    }
   },
   { immediate: true },
 )
@@ -19,9 +25,11 @@ onBeforeUnmount(() => url.value && URL.revokeObjectURL(url.value))
 
 <template>
   <a v-if="url" :href="url" target="_blank" rel="noopener" class="thumb">
-    <img :src="url" :alt="alt" loading="lazy" />
+    <!-- kein loading="lazy": sonst fehlen Fotos außerhalb des sichtbaren Bereichs im PDF -->
+    <img :src="url" :alt="alt" />
     <span class="sr-only">(Foto in neuem Tab öffnen)</span>
   </a>
+  <span v-else-if="loading" class="thumb missing" data-photo-loading>Foto wird geladen …</span>
   <span v-else class="thumb missing">Foto fehlt</span>
 </template>
 

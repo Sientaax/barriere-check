@@ -6,3 +6,8 @@ coverage
 
 # Claude Code
 CLAUDE.md
+
+# CMS-Worker
+cms-worker/node_modules
+cms-worker/.dev.vars
+cms-worker/.wrangler

@@ -1,0 +1,17 @@
+# Cloudflare Worker für das CMS – Einrichtung siehe README.md in diesem Ordner.
+name = "barriere-check-cms"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+[vars]
+REPO = "Sientaax/barriere-check"
+BRANCH = "main"
+CONTENT_PATH = "src/content/trails.json"
+# Kommagetrennt: Adressen, von denen aus das CMS genutzt werden darf
+ALLOWED_ORIGINS = "https://sientaax.github.io,http://localhost:5173,http://localhost:4173"
+
+# Geheimnisse NICHT hier eintragen, sondern mit:
+#   npx wrangler secret put CMS_USER
+#   npx wrangler secret put CMS_PASSWORD
+#   npx wrangler secret put SESSION_SECRET
+#   npx wrangler secret put GITHUB_TOKEN

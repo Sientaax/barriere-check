@@ -71,7 +71,6 @@ import { DISCLAIMER, LEVELS, SCALE } from '../config/rating'
         <ol class="qs">
           <li v-for="q in questionsOf(c.id)" :key="q.id">
             <strong>{{ q.id }}:</strong> {{ q.text }}
-            <span class="small muted">(Gewicht {{ q.weight.toLocaleString('de-DE', { maximumFractionDigits: 2 }) }})</span>
           </li>
         </ol>
       </div>

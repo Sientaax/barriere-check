@@ -4,17 +4,27 @@ Webanwendung zur strukturierten Einschätzung der **Barrierefreiheit und Inklusi
 Fragebogen mit 28 Kriterien in 7 gewichteten Kategorien, Nachweise (Fotos, Messwerte, Kommentare),
 automatische Auswertung, Problemübersicht, Nutzergruppen-Profile und druckbarer Ergebnisbericht.
 
-Alle Daten bleiben **lokal im Browser** (IndexedDB). Sicherung und Weitergabe erfolgen über den JSON-Export/-Import.
+Lehrpfade und ihre Wegabschnitte werden von der Redaktion über das **CMS** (`…/#/cms`, Login mit gemeinsamem
+Benutzernamen/Passwort) gepflegt und liegen in `src/content/trails.json`. Nutzende können sie nicht anlegen oder
+löschen. Bewertet wird **pro Abschnitt**.
+
+**CMS-Einrichtung (einmalig):** siehe [`cms-worker/README.md`](cms-worker/README.md). Ein kleiner kostenloser
+Cloudflare Worker prüft den Login, hält den GitHub-Schlüssel geheim und speichert Änderungen als Commit –
+GitHub Pages veröffentlicht sie danach automatisch (ca. 1–2 Minuten).
+
+Alle Bewertungen bleiben **lokal im Browser** (IndexedDB). Sicherung und Weitergabe erfolgen über „Speichern“
+(JSON oder PDF) bzw. den JSON-Import auf der Startseite. Vor dem Import zeigt ein Dialog, welcher Abschnitt
+betroffen ist und ob dessen vorhandene Bewertung überschrieben wird.
 
 ## Ablauf
 
-1. Lehrpfad anlegen – Name, Lage, Länge, allgemeine Informationen
-2. Wegabschnitte festlegen
-3. Fragebogen bearbeiten – Kategorien A–G, Skala 0–4, N/A, nicht beurteilbar
-4. Nachweise ergänzen – Fotos, Messwerte, Kommentare
-5. Auswertung – Kategorie-, Abschnitts-, Nutzergruppen- und Gesamtergebnisse
-6. Probleme anzeigen – kritische Barrieren und nicht beurteilbare Kriterien
-7. Ergebnisbericht – Prozentwerte, Einzelbewertungen, priorisierte Handlungsempfehlungen (Drucken / PDF)
+Startseite: Kacheln aller Streckenabschnitte / Wanderrouten → Abschnitt wählen, dann
+
+1. Fragebogen bearbeiten – Kategorien A–G, Skala 0–4, N/A, nicht beurteilbar
+2. Nachweise ergänzen – Fotos, Messwerte, Kommentare
+3. Auswertung – Kategorie-, Nutzergruppen- und Gesamtergebnis
+4. Probleme anzeigen – kritische Barrieren und nicht beurteilbare Kriterien
+5. Ergebnisbericht – Prozentwerte, Einzelbewertungen, priorisierte Handlungsempfehlungen (Speichern als JSON / PDF)
 
 ## Bewertungslogik
 
@@ -41,6 +51,9 @@ Alle Daten bleiben **lokal im Browser** (IndexedDB). Sicherung und Weitergabe er
 
 ## Anpassen
 
+- Lehrpfade und Abschnitte: über das CMS (Daten: `src/content/trails.json`; Regeln in `src/lib/trailSchema.ts`:
+  jeder Lehrpfad ≥ 1 Abschnitt, IDs eindeutig – IDs werden automatisch vergeben und dürfen sich nicht ändern,
+  weil Bewertungen darüber zugeordnet werden)
 - Kriterien, Gewichte, Nutzergruppen, Prüfhinweise und Empfehlungstexte: `src/config/criteria.ts`
 - Skala, Einstufungsgrenzen, Hinweistext: `src/config/rating.ts`
 - Berechnung: `src/lib/scoring.ts` (Tests in `tests/scoring.spec.ts`)
@@ -62,4 +75,4 @@ Technik: Vue 3, Vite, TypeScript, Pinia, Vue Router (Hash-Modus), idb-keyval, Vi
 1. Repository auf GitHub anlegen und Code auf den Branch `main` pushen.
 2. Unter **Settings → Pages → Build and deployment → Source** „GitHub Actions“ wählen.
 3. Jeder Push auf `main` testet, baut und veröffentlicht die Seite automatisch
-   (`.github/workflows/deploy.yml`) unter `https://<benutzer>.github.io/<repo>/`.
+   (`.github/workflows/deploy.yml`) unter `https://sientaax.github.io/barriere-check/#/`.

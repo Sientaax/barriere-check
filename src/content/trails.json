@@ -1,0 +1,31 @@
+[
+  {
+    "id": "beispiel-lehrpfad",
+    "name": "Beispiel-Lehrpfad",
+    "location": "Regensburg",
+    "lengthKm": 2.4,
+    "topic": "Kulturlandschaft",
+    "subject": "Geographie",
+    "description": "Platzhalter – die echten Lehrpfade werden über das CMS angelegt.",
+    "sections": [
+      {
+        "id": "beispiel-abschnitt-1",
+        "name": "Parkplatz bis Station 3",
+        "lengthM": 1200,
+        "startDesc": "Parkplatz",
+        "endDesc": "Station 3",
+        "difficulty": "leicht",
+        "notes": ""
+      },
+      {
+        "id": "beispiel-abschnitt-2",
+        "name": "Station 3 bis Aussichtspunkt",
+        "lengthM": 1200,
+        "startDesc": "Station 3",
+        "endDesc": "Aussichtspunkt",
+        "difficulty": "mittel",
+        "notes": "Steiler Anstieg kurz vor dem Aussichtspunkt."
+      }
+    ]
+  }
+]

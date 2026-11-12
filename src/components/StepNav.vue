@@ -2,7 +2,7 @@
 import { useRoute } from 'vue-router'
 import { STEPS } from '../router'
 
-defineProps<{ trailId: string }>()
+defineProps<{ sectionId: string }>()
 const route = useRoute()
 </script>
 
@@ -11,7 +11,7 @@ const route = useRoute()
     <ol class="stepper">
       <li v-for="(s, i) in STEPS" :key="s.name">
         <RouterLink
-          :to="`/pfad/${trailId}/${s.name}`"
+          :to="`/abschnitt/${sectionId}/${s.name}`"
           :aria-current="route.name === s.name ? 'page' : undefined"
         >
           <span class="num" aria-hidden="true">{{ i + 1 }}</span>

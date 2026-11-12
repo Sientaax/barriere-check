@@ -56,7 +56,7 @@ function select(v: AnswerValue) {
 .opt.checked.v-2 { background: #8a6a00; }
 .opt.checked.v-3 { background: #3f7a22; }
 .opt.checked.v-4 { background: var(--lvl-sehr-hoch); }
-.opt.checked.v-na { background: #4d5a53; }
+.opt.checked.v-na { background: var(--muted); }
 .opt.checked.v-unknown { background: var(--info); }
 .opt.v-na, .opt.v-unknown { background: var(--surface-2); }
 .reset { grid-column: 1 / -1; justify-self: start; }

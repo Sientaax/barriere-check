@@ -1,18 +1,20 @@
-import { get, set, del, createStore, keys } from 'idb-keyval'
-import type { Trail } from '../types'
+import { get, set, del, createStore } from 'idb-keyval'
+import type { Assessment } from '../types'
 import { blobToDataUrl, dataUrlToBlob } from './image'
 
 const db = createStore('barriere-check', 'data')
-const TRAILS_KEY = 'trails'
+// Hinweis: Der frühere Schlüssel 'trails' (Version 1, selbst angelegte Lehrpfade) wird nicht mehr
+// gelesen, aber auch nicht gelöscht.
+const ASSESSMENTS_KEY = 'assessments'
 const PHOTO_PREFIX = 'photo:'
 
-export async function loadTrails(): Promise<Trail[]> {
-  return (await get<Trail[]>(TRAILS_KEY, db)) ?? []
+export async function loadAssessments(): Promise<Record<string, Assessment>> {
+  return (await get<Record<string, Assessment>>(ASSESSMENTS_KEY, db)) ?? {}
 }
 
-export async function saveTrails(trails: Trail[]): Promise<void> {
+export async function saveAssessments(assessments: Record<string, Assessment>): Promise<void> {
   // Proxies entfernen, damit IndexedDB die Daten klonen kann
-  await set(TRAILS_KEY, JSON.parse(JSON.stringify(trails)), db)
+  await set(ASSESSMENTS_KEY, JSON.parse(JSON.stringify(assessments)), db)
 }
 
 export async function savePhoto(id: string, blob: Blob): Promise<void> {
@@ -27,36 +29,31 @@ export async function deletePhoto(id: string): Promise<void> {
   await del(PHOTO_PREFIX + id, db)
 }
 
-/** Entfernt Fotos, die von keinem Lehrpfad mehr referenziert werden. */
-export async function cleanupPhotos(trails: Trail[]): Promise<void> {
-  const used = new Set(photoIdsOf(trails))
-  for (const k of await keys(db)) {
-    const key = String(k)
-    if (key.startsWith(PHOTO_PREFIX) && !used.has(key.slice(PHOTO_PREFIX.length))) await del(key, db)
-  }
-}
-
-export function photoIdsOf(trails: Trail[]): string[] {
-  return trails.flatMap((t) => t.sections.flatMap((s) => Object.values(s.answers).flatMap((a) => a.photoIds)))
+export function photoIdsOf(assessments: Assessment[]): string[] {
+  return assessments.flatMap((a) => Object.values(a.answers).flatMap((x) => x.photoIds))
 }
 
 // ---------------------------------------------------------------------------
 // Export / Import
 
 export const EXPORT_FORMAT = 'barriere-check'
-export const EXPORT_VERSION = 1
+/**
+ * Version 1: selbst angelegte Lehrpfade (`trails`) – wird nicht mehr importiert.
+ * Version 2: Bewertungen je vorgegebenem Abschnitt (`assessments`).
+ */
+export const EXPORT_VERSION = 2
 
 export interface ExportFile {
   format: typeof EXPORT_FORMAT
   version: number
   exportedAt: string
-  trails: Trail[]
+  assessments: Assessment[]
   photos: Record<string, string> // id → data URL
 }
 
-export async function buildExport(trails: Trail[]): Promise<ExportFile> {
+export async function buildExport(assessments: Assessment[]): Promise<ExportFile> {
   const photos: Record<string, string> = {}
-  for (const id of photoIdsOf(trails)) {
+  for (const id of photoIdsOf(assessments)) {
     const blob = await loadPhoto(id)
     if (blob) photos[id] = await blobToDataUrl(blob)
   }
@@ -64,20 +61,43 @@ export async function buildExport(trails: Trail[]): Promise<ExportFile> {
     format: EXPORT_FORMAT,
     version: EXPORT_VERSION,
     exportedAt: new Date().toISOString(),
-    trails: JSON.parse(JSON.stringify(trails)),
+    assessments: JSON.parse(JSON.stringify(assessments)),
     photos,
   }
 }
 
-export async function parseImport(text: string): Promise<Trail[]> {
-  const data = JSON.parse(text) as Partial<ExportFile>
-  if (data.format !== EXPORT_FORMAT || !Array.isArray(data.trails)) {
+export interface ParsedImport {
+  assessments: Assessment[]
+  photos: Record<string, string>
+}
+
+/** Liest und prüft eine Exportdatei, ohne etwas zu speichern (Bestätigung erfolgt im Import-Dialog). */
+export function parseImport(text: string): ParsedImport {
+  let data: Partial<ExportFile> & { trails?: unknown }
+  try {
+    data = JSON.parse(text)
+  } catch {
     throw new Error('Die Datei ist kein gültiger Barriere-Check-Export.')
   }
-  for (const [id, url] of Object.entries(data.photos ?? {})) {
+  if (data.format !== EXPORT_FORMAT) {
+    throw new Error('Die Datei ist kein gültiger Barriere-Check-Export.')
+  }
+  if (!Array.isArray(data.assessments)) {
+    if (Array.isArray(data.trails)) {
+      throw new Error(
+        'Die Datei stammt aus einer älteren Version (selbst angelegte Lehrpfade) und kann nicht mehr importiert werden – Lehrpfade und Abschnitte sind jetzt vorgegeben.',
+      )
+    }
+    throw new Error('Die Datei ist kein gültiger Barriere-Check-Export.')
+  }
+  return { assessments: data.assessments, photos: data.photos ?? {} }
+}
+
+/** Speichert die Fotos einer bestätigten Importdatei. */
+export async function applyImportPhotos(photos: Record<string, string>): Promise<void> {
+  for (const [id, url] of Object.entries(photos)) {
     await savePhoto(id, await dataUrlToBlob(url))
   }
-  return data.trails
 }
 
 export function downloadFile(filename: string, content: string, type = 'application/json') {

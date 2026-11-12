@@ -12,10 +12,10 @@ onMounted(() => store.load())
     <div class="container">
       <RouterLink to="/" class="brand">
         <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#fff" fill-opacity=".16"/><path d="M6 24c4-8 8-12 10-12s6 4 10 12" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/><circle cx="16" cy="8" r="2.5" fill="#fff"/></svg>
-        Barriere-Check Lehrpfade
+        Barriere-Check
       </RouterLink>
       <nav aria-label="Hauptnavigation">
-        <RouterLink to="/">Meine Lehrpfade</RouterLink>
+        <RouterLink to="/">Streckenabschnitte / Wanderrouten</RouterLink>
         <RouterLink to="/methodik">Methodik</RouterLink>
       </nav>
     </div>
@@ -32,11 +32,13 @@ onMounted(() => store.load())
   <footer class="site-footer">
     <div class="container">
       <p>
-        Barriere-Check Lehrpfade – Bewertungssystem zur Einschätzung von Barrierefreiheit und Inklusion.
+        Barriere-Check – Bewertungssystem zur Einschätzung von Barrierefreiheit und Inklusion.
         Alle Daten werden ausschließlich lokal in diesem Browser gespeichert.
       </p>
+      <p><RouterLink to="/cms">Redaktion (CMS)</RouterLink></p>
     </div>
   </footer>
+  <p class="print-footer" aria-hidden="true">OTH Regensburg</p>
 </template>
 
 <style>

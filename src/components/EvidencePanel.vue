@@ -51,9 +51,9 @@ function removeMeasurement(id: string) {
 
 <template>
   <details class="evidence">
-    <summary>
-      Nachweise
-      <span class="badge" :class="count ? 'badge-ok' : ''">{{ count ? `${count} vorhanden` : 'keine' }}</span>
+    <summary class="btn btn-sm">
+      <template v-if="count">Nachweise <span class="badge badge-ok">{{ count }} vorhanden</span></template>
+      <template v-else>+ Nachweise hinzufügen</template>
       <span class="sr-only"> zu {{ questionLabel }}</span>
     </summary>
     <div class="body">
@@ -110,7 +110,9 @@ function removeMeasurement(id: string) {
 
 <style scoped>
 .evidence { margin-top: 0.75rem; border-top: 1px dashed var(--border); padding-top: 0.5rem; }
-summary { cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem; min-height: 44px; }
+summary { list-style: none; width: fit-content; }
+summary::-webkit-details-marker { display: none; }
+.evidence[open] summary { background: var(--primary-soft); }
 .body { display: grid; gap: 1rem; padding: 0.5rem 0 0.25rem; }
 .measure { border: 0; padding: 0; margin: 0; display: grid; gap: 0.5rem; }
 .measure legend { margin-bottom: 0.3rem; }

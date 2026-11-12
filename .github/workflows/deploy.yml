@@ -27,6 +27,9 @@ jobs:
       - run: npm test
       - run: npm run typecheck
       - run: npm run build
+        env:
+          # Adresse des CMS-Workers (Repo-Variable, siehe cms-worker/README.md)
+          VITE_CMS_API: ${{ vars.CMS_API_URL }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

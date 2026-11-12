@@ -36,9 +36,11 @@ const counts = computed(() =>
       </p>
     </div>
     <p class="small muted">
-      {{ progress.done }} von {{ progress.total }} Einzelbewertungen erfasst · {{ counts.na }} × nicht zutreffend ·
-      {{ trail.sections.length }} Abschnitt(e),
-      {{ res.lengthWeighted ? 'längengewichtet gemittelt' : 'gleichgewichtet gemittelt (nicht alle Längen angegeben)' }}
+      {{ progress.done }} von {{ progress.total }} Einzelbewertungen erfasst · {{ counts.na }} × nicht zutreffend
+      <template v-if="trail.sections.length > 1">
+        · {{ trail.sections.length }} Abschnitte,
+        {{ res.lengthWeighted ? 'längengewichtet gemittelt' : 'gleichgewichtet gemittelt (nicht alle Längen angegeben)' }}
+      </template>
     </p>
   </div>
 
@@ -46,11 +48,10 @@ const counts = computed(() =>
     <component :is="h">Ergebnisse nach Kategorie</component>
     <div class="table-wrap">
       <table>
-        <caption class="sr-only">Ergebnisse je Kategorie für den gesamten Lehrpfad</caption>
+        <caption class="sr-only">Ergebnisse je Kategorie</caption>
         <thead>
           <tr>
             <th scope="col">Kategorie</th>
-            <th scope="col" class="num">Gewicht</th>
             <th scope="col" class="barcol">Ergebnis</th>
             <th scope="col">Einstufung</th>
           </tr>
@@ -58,7 +59,6 @@ const counts = computed(() =>
         <tbody>
           <tr v-for="c in CATEGORIES" :key="c.id">
             <th scope="row">{{ c.id }}. {{ c.title }}</th>
-            <td class="num">{{ c.weight }} %</td>
             <td><ScoreBar :p-min="res.categories[c.id].pMin" :p-max="res.categories[c.id].pMax" :label="c.title" /></td>
             <td><LevelBadge :p-min="res.categories[c.id].pMin" :p-max="res.categories[c.id].pMax" /></td>
           </tr>

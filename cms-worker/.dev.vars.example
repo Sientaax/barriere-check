@@ -1,0 +1,7 @@
+# Kopieren nach .dev.vars (wird nicht ins Repo übernommen) – nur für lokales Testen mit `npm run dev`
+CMS_USER=redaktion
+CMS_PASSWORD=bitte-ein-langes-passwort
+SESSION_SECRET=zufaelliger-langer-text
+GITHUB_TOKEN=github_pat_...
+# Zum gefahrlosen Testen auf einen eigenen Branch schreiben:
+# BRANCH=cms-test

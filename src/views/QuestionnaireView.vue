@@ -1,24 +1,23 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useTrail } from './trailContext'
+import { useRouter } from 'vue-router'
+import { useSectionView } from './trailContext'
 import { emptyAnswer, useTrails } from '../stores/trails'
 import { CATEGORIES, USER_GROUPS, questionsOf, type CategoryId } from '../config/criteria'
+import { difficultyLabel } from '../config/trails'
 import { computeScore, isCritical, progressOf, sectionLookup } from '../lib/scoring'
 import type { AnswerValue } from '../config/rating'
 import RatingInput from '../components/RatingInput.vue'
 import EvidencePanel from '../components/EvidencePanel.vue'
 import ScoreBar from '../components/ScoreBar.vue'
 
-const trail = useTrail()
+const view = useSectionView()
 const store = useTrails()
-const route = useRoute()
 const router = useRouter()
 
-const section = computed(
-  () => trail.value.sections.find((s) => s.id === route.params.sectionId) ?? trail.value.sections[0],
-)
-const sectionIndex = computed(() => trail.value.sections.indexOf(section.value))
+const section = computed(() => view.value.trail.sections[0])
+const def = computed(() => view.value.sectionDef)
+const trailDef = computed(() => view.value.trailDef)
 const activeCat = ref<CategoryId>('A')
 const copyFrom = ref('')
 const status = ref('')
@@ -35,19 +34,20 @@ watch(
 
 const questions = computed(() => questionsOf(activeCat.value))
 const catScore = computed(() => computeScore(questions.value, sectionLookup(section.value)))
-const otherSections = computed(() => trail.value.sections.filter((s) => s.id !== section.value.id))
+// Geschwisterabschnitte desselben Lehrpfads mit vorhandenen Antworten in dieser Kategorie
+const otherSections = computed(() =>
+  trailDef.value.sections.filter(
+    (s) => s.id !== section.value.id && questions.value.some((q) => (store.peek(s.id).answers[q.id]?.value ?? null) !== null),
+  ),
+)
 
 function groupLabel(id: string) {
   return USER_GROUPS.find((g) => g.id === id)?.short ?? id
 }
 
-function selectSection(id: string) {
-  router.replace(`/pfad/${trail.value.id}/fragebogen/${id}`)
-}
-
 function setValue(qid: string, v: AnswerValue) {
   section.value.answers[qid].value = v
-  store.touch(trail.value)
+  store.touch(section.value.id)
 }
 
 function catProgress(id: CategoryId) {
@@ -72,11 +72,8 @@ async function gotoCat(d: -1 | 1) {
   const i = CATEGORIES.findIndex((c) => c.id === activeCat.value) + d
   if (i >= 0 && i < CATEGORIES.length) {
     activeCat.value = CATEGORIES[i].id
-  } else if (d === 1 && sectionIndex.value < trail.value.sections.length - 1) {
-    activeCat.value = 'A'
-    selectSection(trail.value.sections[sectionIndex.value + 1].id)
   } else if (d === 1) {
-    router.push(`/pfad/${trail.value.id}/auswertung`)
+    router.push(`/abschnitt/${section.value.id}/auswertung`)
     return
   }
   await nextTick()
@@ -84,19 +81,19 @@ async function gotoCat(d: -1 | 1) {
 }
 
 function copyCategory() {
-  const src = trail.value.sections.find((s) => s.id === copyFrom.value)
+  const src = trailDef.value.sections.find((s) => s.id === copyFrom.value)
   if (!src) return
+  const answers = store.peek(src.id).answers
   for (const q of questions.value) {
-    const a = src.answers[q.id]
+    const a = answers[q.id]
     if (a) section.value.answers[q.id] = { ...JSON.parse(JSON.stringify(a)) }
   }
+  store.touch(section.value.id)
   status.value = `Bewertungen der Kategorie ${activeCat.value} aus „${src.name}“ übernommen.`
   copyFrom.value = ''
 }
 
-const isLastStep = computed(
-  () => activeCat.value === 'G' && sectionIndex.value === trail.value.sections.length - 1,
-)
+const isLastStep = computed(() => activeCat.value === 'G')
 </script>
 
 <template>
@@ -104,22 +101,25 @@ const isLastStep = computed(
     <div class="card">
       <div class="page-head">
         <div>
-          <h1 id="h1">3. Fragebogen &amp; 4. Nachweise</h1>
+          <h1 id="h1">Bewertung</h1>
           <p class="muted">
             Bewerten Sie jede Frage auf der Skala von 0 bis 4. Ergänzen Sie Fotos, Messwerte und Kommentare als
             Nachweise. Alles wird automatisch gespeichert.
           </p>
         </div>
       </div>
+      <div class="info">
+        <p class="small muted trail-name">{{ trailDef.name }}</p>
+        <h2 class="sec-name">{{ def.name }}</h2>
+        <dl class="meta">
+          <div v-if="def.lengthM"><dt>Länge</dt><dd>{{ def.lengthM.toLocaleString('de-DE') }} m</dd></div>
+          <div v-if="def.startDesc || def.endDesc"><dt>Beginn → Ende</dt><dd>{{ def.startDesc || '…' }} → {{ def.endDesc || '…' }}</dd></div>
+          <div><dt>Schwierigkeit</dt><dd>{{ difficultyLabel(def.difficulty) }}</dd></div>
+          <div v-if="trailDef.location"><dt>Lage / Ort</dt><dd>{{ trailDef.location }}</dd></div>
+        </dl>
+        <p v-if="def.notes" class="small notes"><strong>Besonderheiten:</strong> {{ def.notes }}</p>
+      </div>
       <div class="form-grid">
-        <div class="field">
-          <label for="sec-select">Wegabschnitt</label>
-          <select id="sec-select" :value="section.id" @change="selectSection(($event.target as HTMLSelectElement).value)">
-            <option v-for="(s, i) in trail.sections" :key="s.id" :value="s.id">
-              {{ i + 1 }}. {{ s.name }} ({{ progressOf([s]).done }}/{{ progressOf([s]).total }})
-            </option>
-          </select>
-        </div>
         <div class="field">
           <span class="label">Fortschritt in diesem Abschnitt</span>
           <progress :value="progressOf([section]).done" :max="progressOf([section]).total" aria-label="Fortschritt">
@@ -154,7 +154,6 @@ const isLastStep = computed(
       <div class="card cat-head">
         <h2 id="panel-heading" tabindex="-1">
           {{ activeCat }}. {{ CATEGORIES.find((c) => c.id === activeCat)!.title }}
-          <span class="badge">Gewicht {{ CATEGORIES.find((c) => c.id === activeCat)!.weight }} %</span>
         </h2>
         <ScoreBar :p-min="catScore.pMin" :p-max="catScore.pMax" :label="`Ergebnis Kategorie ${activeCat}`" />
         <div v-if="otherSections.length" class="copy">
@@ -175,14 +174,13 @@ const isLastStep = computed(
           <h3 :id="`q-${section.id}-${q.id}`" class="qtext">
             <span class="qid">{{ q.id }}</span> {{ q.text }}
           </h3>
-          <p class="groups small">
-            <span class="sr-only">Besonders relevant für:</span>
-            <span v-for="g in q.userGroups" :key="g" class="badge">{{ groupLabel(g) }}</span>
-            <span class="muted">· Gewicht {{ q.weight.toLocaleString('de-DE', { maximumFractionDigits: 2 }) }}</span>
-          </p>
           <details class="hint">
             <summary>Prüfhinweise</summary>
             <p>{{ q.hint }}</p>
+            <p class="groups-label">Besonders relevant für:</p>
+            <p class="groups small">
+              <span v-for="g in q.userGroups" :key="g" class="badge">{{ groupLabel(g) }}</span>
+            </p>
           </details>
           <RatingInput
             v-if="section.answers[q.id]"
@@ -211,7 +209,6 @@ const isLastStep = computed(
         <button type="button" class="btn" :disabled="activeCat === 'A'" @click="gotoCat(-1)">← Vorherige Kategorie</button>
         <button type="button" class="btn btn-primary" @click="gotoCat(1)">
           <template v-if="isLastStep">Zur Auswertung →</template>
-          <template v-else-if="activeCat === 'G'">Nächster Abschnitt →</template>
           <template v-else>Nächste Kategorie →</template>
         </button>
       </div>
@@ -221,6 +218,13 @@ const isLastStep = computed(
 
 <style scoped>
 progress { width: 100%; height: 14px; accent-color: var(--primary); }
+.info { margin-bottom: 1rem; }
+.trail-name { margin: 0; }
+.sec-name { margin-bottom: 0.4rem; }
+.meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.5rem 1rem; margin: 0 0 0.5rem; }
+.meta dt { font-size: 0.8rem; color: var(--muted); }
+.meta dd { margin: 0; font-weight: 600; }
+.notes { white-space: pre-line; }
 .cat-head h2 { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
 .cat-head h2:focus { outline: none; }
 .copy { margin-top: 1rem; display: grid; gap: 0.3rem; }
@@ -230,7 +234,8 @@ progress { width: 100%; height: 14px; accent-color: var(--primary); }
 .question.critical { border-left: 5px solid var(--danger); }
 .qtext { font-size: 1.05rem; display: flex; gap: 0.6rem; align-items: baseline; }
 .qid { flex: none; background: var(--primary); color: #fff; border-radius: 6px; padding: 0.05rem 0.45rem; font-size: 0.9rem; }
-.groups { display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center; }
+.hint .groups-label { font-weight: 600; color: var(--text); margin-top: 0.6rem; }
+.hint .groups { display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center; margin-top: 0.3rem; }
 .hint { margin-bottom: 0.75rem; font-size: 0.95rem; }
 .hint summary { cursor: pointer; color: var(--primary-strong); font-weight: 600; min-height: 32px; }
 .hint p { margin: 0.4rem 0 0; color: var(--muted); }
