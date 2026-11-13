@@ -1,12 +1,12 @@
 [
   {
     "id": "beispiel-lehrpfad",
-    "name": "Beispiel-Lehrpfad",
-    "location": "Regensburg",
-    "lengthKm": 2.4,
+    "name": "Lehrpfard Schwarzer Reg",
+    "location": "Bayrisch Sisenstein",
+    "lengthKm": 16.2,
     "topic": "Kulturlandschaft",
-    "subject": "Geographie",
-    "description": "Platzhalter – die echten Lehrpfade werden über das CMS angelegt.",
+    "subject": "Management und Vermittlung",
+    "description": "Mittelschwere Tour entlang des Flusses Regen durch verschiedene Vegetationsformen, wie Moor- und Sumpflandschaften sowie Auen- und Mischwälder​",
     "sections": [
       {
         "id": "beispiel-abschnitt-1",
