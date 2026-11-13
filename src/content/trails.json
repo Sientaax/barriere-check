@@ -10,32 +10,39 @@
     "sections": [
       {
         "id": "beispiel-abschnitt-1",
-        "name": "Parkplatz bis Station 3",
-        "lengthM": 1200,
-        "startDesc": "Parkplatz",
-        "endDesc": "Station 3",
-        "difficulty": "leicht",
-        "notes": ""
-      }
-    ]
-  },
-  {
-    "id": "3ee780e1-6d36-43d9-8346-f7dcdbfecc3e",
-    "name": "Jule liebt Sandro",
-    "location": "Regensburg",
-    "lengthKm": 1000,
-    "topic": "hügelig",
-    "subject": "Informatik",
-    "description": "Sandro sieht gut aus",
-    "sections": [
+        "name": "Part 1",
+        "lengthM": 4800,
+        "startDesc": "Bayrisch Eisenstein",
+        "endDesc": "Seebachschleife",
+        "difficulty": "mittel",
+        "notes": "Wegbeschaffenheit: ​\nbreiter Kiesweg, dann enger Waldweg​"
+      },
       {
-        "id": "96f60995-958a-4077-ac5a-a957fe26d5ea",
-        "name": "1.Jahr",
-        "lengthM": 365,
-        "startDesc": "Bumble",
-        "endDesc": "Regensburg",
+        "id": "dcb57f06-cc32-4910-b77c-3690d0228cb5",
+        "name": "Part 2",
+        "lengthM": 2260,
+        "startDesc": "Seebachschleife",
+        "endDesc": "Regenhütte",
         "difficulty": "leicht",
-        "notes": "Ich liebe dich!!"
+        "notes": "Wegbeschaffenheit: ​\nbreiter Kiesweg​"
+      },
+      {
+        "id": "162ed8d7-bf47-4b0d-a589-ee046a6311ea",
+        "name": "Part 3",
+        "lengthM": 6000,
+        "startDesc": "Seebachschleife",
+        "endDesc": "Ludwigsthal",
+        "difficulty": "mittel",
+        "notes": "Wegbeschaffenheit: ​\nWaldweg​"
+      },
+      {
+        "id": "031fb405-2d31-4da8-bc38-910fab9d3753",
+        "name": "Part 4",
+        "lengthM": 9000,
+        "startDesc": "Seebachschleife",
+        "endDesc": "Theresienthal",
+        "difficulty": "mittel",
+        "notes": "Wegbeschaffenheit: ​\nWaldweg, Kiesweg, leichter Anstieg​"
       }
     ]
   }
